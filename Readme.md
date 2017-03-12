@@ -1,4 +1,3 @@
-
 # Contents
 
 * `caspr` CaspR Semi-Automatic Coreference Resolution Adjudication Tool based on Answer Set Programming
@@ -20,7 +19,7 @@ Can process multiple files with CoNLL-format coreference information in last col
 # License
 
   Automatic Coreference Adjudication based on Answer Set Programming
-  Copyright (C) 2015-2017 Peter Schueller <schueller.p@gmail.com>
+  Copyright (C) 2015-2017 Peter Schüller <schueller.p@gmail.com>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -34,4 +33,3 @@ Can process multiple files with CoNLL-format coreference information in last col
 
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
