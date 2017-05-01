@@ -1,6 +1,6 @@
 # Contents
 
-* `caspr` CaspR Semi-Automatic Coreference Resolution Adjudication Tool based on Answer Set Programming
+* `caspr.py` CaspR Semi-Automatic Coreference Resolution Adjudication Tool based on Answer Set Programming
 
 (submitted to LPNMR 2017)
 
