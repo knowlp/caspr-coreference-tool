@@ -1,3 +1,5 @@
+[![codebeat badge](https://codebeat.co/badges/dfd893aa-d9b5-44e0-b44d-d2aab9ee3676)](https://codebeat.co/projects/bitbucket-org-knowlp-caspr-coreference-tool-master)
+
 # Contents
 
 * `caspr.py` CaspR Semi-Automatic Coreference Resolution Adjudication Tool based on Answer Set Programming
