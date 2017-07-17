@@ -31,7 +31,7 @@ import pexpect
 import time
 
 # TODO detect clingo/search for clingo/check if version is ok (needs to support USC optimization mode)
-CLINGO = 'clingo-5'
+CLINGO = 'clingo-5.2.0'
 # accept suboptimal solutions if optimum not proved after so many seconds (set to None for infinite)
 TIMELIMIT = 900
 PREFIX = 'CaspR: '
@@ -364,8 +364,7 @@ def createInputFacts(annotations, forcedannotation=None):
   global config
   global anonymousfileconst
   mfacts, cfacts, lfacts = [], [], []
-  maxchain = 0
-  maxtoken = 0
+  maxminchain, maxtoken, sumchain, summention = 0, 0, 0, 0
   sannotations = sorted(annotations, key=lambda x: x[0])
   for ann in sannotations:
     #warn('annotation: '+repr(ann))
@@ -379,16 +378,20 @@ def createInputFacts(annotations, forcedannotation=None):
       
     mfacts += mentionFacts(fileconst, annodict['mentions'])
     cfacts += chainFacts(fileconst, annodict['chains'])
-    maxchain = max(maxchain, len(annodict['chains']))
+    summention += len(annodict['mentions'])
+    sumchain += len(annodict['chains'])
     maxtoken = max(maxtoken, len(annodict['lines']))
+    # max number of mentions in chain
+    maxminchain = max(maxminchain, max(map(lambda x: len(x), annodict['chains'].itervalues())))
   for ann in [forcedannotation for x in [1] if forcedannotation]:
     #warn('forced annotation: '+repr(ann))
     unused_filename, annodict = ann
     mfacts += mentionFacts('forced', annodict['mentions'])
     cfacts += chainFacts('forced', annodict['chains'])
     lfacts += map(lambda lineno: 'emptyline({}).'.format(lineno), annodict['none'])
-  warn('creating facts: {} tokens, {} mentions, {} chains (max {}), {} empty lines'.format(
-    maxtoken, len(mfacts), len(cfacts), maxchain, len(lfacts)))
+  # number of tokens in doc = same in all docs, just take max
+  warn('creating facts: {} tokens, {} annotations, {} mentions, {} chains (longest {} mentions), {} empty lines'.format(
+    maxtoken, len(sannotations), summention, sumchain, maxminchain, len(lfacts)))
   return mfacts + cfacts + lfacts
 
 def parseAtom(atmstr):
@@ -435,11 +438,15 @@ def runASP(code, config):
     return runASPWasp(code, config)
 
 def runInPExpect(args, code, timelimit, logprefix=None):
-  # with subprocess (no 'live' watching the solver output because the solver buffers)
+  # with subprocess it is much easier:
   #clingop = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr)
   #out, err = clingop.communicate(code)
+  # BUT we cannot do 'live' watching of the optimization
+  # because the solver buffers -> pexpect
 
-  # with pexpect (live watching possible because pexpect runs the child in a terminal so it will buffer per line)
+  # with pexpect, live watching possible
+  # because pexpect runs the child in a terminal
+  # so it will buffer per line
   def sender(proc, what):
     #sys.stderr.write('sender started\n')
     proc.send(what)
@@ -532,7 +539,7 @@ def runASPClasp(code, config):
   #atoms = map(parseAtom, solution['Value'])
   #return atoms
 
-  answersets = []
+  answersets = set([])
   bestcost = None
   optimal = False
   lineiter = iter(out)
@@ -541,19 +548,19 @@ def runASPClasp(code, config):
       line = lineiter.next()
       if line.startswith('Answer: '):
         answerset = lineiter.next().strip()
-        cost = lineiter.next().split(' ')[1].strip()
+        cost = lineiter.next().split(' ',1)[1].strip()
         #warn("got cost "+repr(cost)+" at bestcost "+repr(bestcost)+"with {} answersets".format(len(answersets)))
-        if bestcost is None or int(cost) < int(bestcost):
+        if bestcost is None or cost != bestcost:
           bestcost = cost
-          answersets = []
-        answersets.append(answerset)
+          answersets = set([])
+        answersets.add(answerset)
       elif line.startswith('OPTIMUM FOUND'):
         optimal = True
   except StopIteration:
     pass
   if len(answersets) == 0:
     raise Exception('clingo found no answer set')
-  warn('clingo: found {} answer sets with cost {} optimal={}'.format(len(answersets), repr(cost), str(optimal)))
+  warn('found {} answer sets with cost {} optimal={}'.format(len(answersets), repr(cost), str(optimal)))
   if config['debug']:
     for answerset in answersets:
       warn('Answer Set: '+repr(answerset))
@@ -643,12 +650,16 @@ encoding_mm = '''
   { uselink(File,M1,M2) } :- link(File,M1,M2).
    
   % Represent canonical mentions and links between them.
+  %clink(MID1,MID2) :- uselink(File,M1,M2),
+  %  mention(File,M1,From1,To1), mention(File,M2,From2,To2),
+  %  MID1=mid(From1,To1), MID2=mid(From2,To2), MID1 < MID2.
+  %clink(MID1,MID2) :- uselink(File,M2,M1),
+  %  mention(File,M1,From1,To1), mention(File,M2,From2,To2),
+  %  MID1=mid(From1,To1), MID2=mid(From2,To2), MID1 < MID2.
   clink(MID1,MID2) :- uselink(File,M1,M2),
-    mention(File,M1,From1,To1), mention(File,M2,From2,To2),
-    MID1=mid(From1,To1), MID2=mid(From2,To2), MID1 < MID2.
+    cfmention(File,M1,MID1), cfmention(File,M2,MID2), MID1 < MID2.
   clink(MID1,MID2) :- uselink(File,M2,M1),
-    mention(File,M1,From1,To1), mention(File,M2,From2,To2),
-    MID1=mid(From1,To1), MID2=mid(From2,To2), MID1 < MID2.
+    cfmention(File,M1,MID1), cfmention(File,M2,MID2), MID1 < MID2.
    
   % Reflexive symmetric transitive closure of clink/2.
   cc(X,Y) :- clink(X,Y).
@@ -699,33 +710,28 @@ encoding_cm = '''
 encoding_forcing = '''
   % eliminate warnings if emptyline/1 is not defined
   emptyline(-1).
-  % which tokens are forced?
-  forced(Line) :- emptyline(Line).
-  forced(From) :- mention(forced,_,From,To).
-  forced(To) :- mention(forced,_,From,To).
+  % forced tokens
+  forcetok(Line) :- emptyline(Line).
+  forcetok(From) :- mention(forced,_,From,To).
+  forcetok(To) :- mention(forced,_,From,To).
 
-  % which result chain mentions in forced lines are covered by forced mentions?
-  forcedok(From,To) :- resultcm(_,mid(From,To)), mention(forced,_,From,To).
+  % forbid extra (i.e., not forced) result mentions at forced lines
+  :- forcetok(From), resultcm(_,mid(From,To)), not mention(forced,_,From,To).
+  :- forcetok(To), resultcm(_,mid(From,To)), not mention(forced,_,From,To).
 
-  % forbid solutions where result chain mentions at forced lines are not covered
-  :- resultcm(_,mid(From,To)), not forcedok(From,To), forced(From).
-  :- resultcm(_,mid(From,To)), not forcedok(From,To), forced(To).
+  % require that all forced mentions exist in the solution
+  :- mention(forced,_,From,To), not resultcm(_,mid(From,To)).
 
-  % require solutions where all forced mentions exist
-  :- mention(forced,_,From,To), not forcedok(From,To).
+  % ensure that pairs of mentions in same forced chain end up in the same result chain
+  forcesame(MID1,MID2) :-
+    chainmention(forced,C,M1), chainmention(forced,C,M2), M1 != M2,
+    cfmention(forced,M1,MID1), cfmention(forced,M2,MID2), MID1 < MID2.
+  :- forcesame(MID1,MID2), resultcm(C1,MID1), resultcm(C2,MID2), C1 != C2.
 
-  % require solutions where all pairs of mentions in forced chains are in the same chain
-  checkforce(MID1,MID2) :- chainmention(forced,C,M1), chainmention(forced,C,M2), M1 != M2,
-    mention(forced,M1,From1,To1), mention(forced,M2,From2,To2),
-    MID1=mid(From1,To1), MID2=mid(From2,To2), MID1 < MID2.
-  goodforce(MID1,MID2) :- checkforce(MID1,MID2), resultcm(C,MID1), resultcm(C,MID2).
-  :- checkforce(MID1,MID2), not goodforce(MID1,MID2).
-
-  % forbid solutions where pairs of mentions in distinct forced chains are not in the same chain
+  % forbid that pairs of mentions in distinct forced chains are in the same chain
   forcedistinct(MID1,MID2) :-
     chainmention(forced,C1,M1), chainmention(forced,C2,M2), C1 < C2,
-    mention(forced,M1,From1,To1), mention(forced,M2,From2,To2),
-    MID1=mid(From1,To1), MID2=mid(From2,To2).
+    cfmention(forced,M1,MID1), cfmention(forced,M2,MID2).
   :- forcedistinct(MID1,MID2), resultcm(C,MID1), resultcm(C,MID2).
   '''
 
@@ -860,22 +866,24 @@ def eraseIgnoredMentions(lines, annotations):
   if we ignore a mention in an annotation because it is a singleton mention we also remove it from the lines
   '''
   rInt = re.compile(r'[0-9]+')
+  nanno = len(annotations)
   for annidx, ann in enumerate(annotations):
     #warn('annotation {} is {}'.format(annidx, repr(ann)))
     remainingchains = set(ann[1]['chains'].keys())
     #warn('annotation {} has remaining chains {}'.format(annidx, repr(remainingchains)))
     for line in lines:
+      column = len(line)-1-nanno+annidx
       #warn('line is {}'.format(repr(line)))
-      chainids = set(map(int, rInt.findall(line[4+annidx])))
+      chainids = set([ int(x) for x in rInt.findall(line[column]) ])
       todelete = chainids - remainingchains
       for d in todelete:
-        orig = line[4+annidx]
+        orig = line[column]
         new = re.sub(r'\({}\)'.format(d), '', orig)
         new = re.sub(r'\({}\b'.format(d), '', new)
         new = re.sub(r'\b{}\)'.format(d), '', new)
         if new == '':
           new = '-'
-        line[4+annidx] = new
+        line[column] = new
         if orig == new:
           warn('orig {} = new {} for deleting {} which should not happen'.format(orig, new, d))
         #warn('orig {} / new {} for deleting {}'.format(orig, new, d))
@@ -1145,7 +1153,7 @@ def detectClingo():
     if p.returncode != 30:
       raise Exception('returncode {}'.format(p.returncode))
   except Exception as e:
-    raise Exception("could not detect clingo 4.5.0, please put {} into your path or set the CLINGO variable to its location {}".format(CLINGO, e))
+    raise Exception("could not detect '{}' in your path {}".format(CLINGO, e))
 
 def main():
   annotations, inout, mode, obj, config = interpretArguments(sys.argv[1:])
