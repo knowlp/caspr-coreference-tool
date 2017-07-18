@@ -1,0 +1,34 @@
+language: python
+
+python:
+  - "2.7"
+
+sudo: required
+dist: trusty
+group: edge
+
+before_install:
+  -
+
+install:
+  - temp1=$PWD
+  - cd /tmp
+  - wget https://github.com/potassco/clingo/releases/download/v5.2.0/clingo-5.2.0-linux-x86_64.tar.gz
+  - tar xvzf clingo-5.2.0-linux-x86_64.tar.gz
+  - cd clingo-5.2.0-linux-x86_64/
+  - mv clingo gringo lpconvert reify clasp ~/.local/bin/
+  - export PATH=$PATH:~/.local/bin
+  - cd $temp1
+
+  - pip install pexpect
+
+  - sudo apt-get install git
+  - git clone https://github.com/alviano/wasp.git
+  - sudo apt-get install libboost-all-dev
+  - cd wasp-master/
+  - make
+  - export PATH=$PATH:~/wasp-master/build/release/
+
+script:
+  - cd examples
+  - ./runall
