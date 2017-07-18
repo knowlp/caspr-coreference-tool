@@ -8,7 +8,10 @@ dist: trusty
 group: edge
 
 before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install libboost-all-dev
   - pip install pexpect
+  - sudo apt-get install python-pexpect
 
 install:
   - temp1=$PWD
@@ -19,8 +22,7 @@ install:
   - mkdir ~/.local/bin/
   - mv clingo gringo lpconvert reify clasp ~/.local/bin/
   - export PATH=$PATH:~/.local/bin
-  
-  - sudo apt-get install libboost-all-dev
+
   - cd /tmp
   - wget -P /tmp https://github.com/alviano/wasp/archive/master.zip
   - unzip master.zip
