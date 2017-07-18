@@ -17,7 +17,7 @@ install:
   - mkdir ~/.local/bin/
   - mv clingo gringo lpconvert reify clasp ~/.local/bin/
   - export PATH=$PATH:~/.local/bin
-  
+
   - pip install pexpect
 
   - sudo apt-get install libboost-all-dev
@@ -32,4 +32,4 @@ install:
 
 script:
   - cd examples
-  - ./runall
+  - ./runall.sh
