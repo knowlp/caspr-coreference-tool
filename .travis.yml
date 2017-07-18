@@ -21,12 +21,14 @@ install:
 
   - pip install pexpect
 
-  - sudo apt-get install git
-  - git clone https://github.com/alviano/wasp.git
   - sudo apt-get install libboost-all-dev
-  - cd wasp-master/
+  - cd /tmp
+  - wget -P /tmp https://github.com/alviano/wasp/archive/master.zip
+  - unzip master.zip
+  - cd master/
   - make
-  - export PATH=$PATH:~/wasp-master/build/release/
+  - mv build/release/ ~/wasp-master
+  - export PATH=$PATH:~/wasp-master
 
 script:
   - cd examples
