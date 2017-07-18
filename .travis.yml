@@ -17,8 +17,7 @@ install:
   - mkdir ~/.local/bin/
   - mv clingo gringo lpconvert reify clasp ~/.local/bin/
   - export PATH=$PATH:~/.local/bin
-  - cd $temp1
-
+  
   - pip install pexpect
 
   - sudo apt-get install libboost-all-dev
@@ -29,6 +28,7 @@ install:
   - make
   - mv build/release/ ~/wasp-master
   - export PATH=$PATH:~/wasp-master
+  - cd $temp1
 
 script:
   - cd examples
