@@ -14,6 +14,7 @@ install:
   - wget https://github.com/potassco/clingo/releases/download/v5.2.0/clingo-5.2.0-linux-x86_64.tar.gz
   - tar xvzf clingo-5.2.0-linux-x86_64.tar.gz
   - cd clingo-5.2.0-linux-x86_64/
+  - mkdir ~/.local/bin/
   - mv clingo gringo lpconvert reify clasp ~/.local/bin/
   - export PATH=$PATH:~/.local/bin
   - cd $temp1
