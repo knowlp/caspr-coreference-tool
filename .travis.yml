@@ -7,8 +7,6 @@ sudo: required
 dist: trusty
 group: edge
 
-before_install:
-  -
 
 install:
   - temp1=$PWD
