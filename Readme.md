@@ -1,10 +1,8 @@
-[![codebeat badge](https://codebeat.co/badges/dfd893aa-d9b5-44e0-b44d-d2aab9ee3676)](https://codebeat.co/projects/bitbucket-org-knowlp-caspr-coreference-tool-master)
+[![codebeat badge](https://codebeat.co/badges/b5b5c4d3-9d53-48bd-ab7d-4ccd4b9c7dbe)](https://codebeat.co/projects/github-com-knowlp-caspr-coreference-tool-master)
 
 # Contents
 
-* `caspr.py` CaspR Semi-Automatic Coreference Resolution Adjudication Tool based on Answer Set Programming
-
-(submitted to LPNMR 2017)
+* CaspR Semi-Automatic Coreference Resolution Adjudication Tool based on Answer Set Programming
 
 Can process multiple files with CoNLL-format coreference information in last column.
 
@@ -17,6 +15,12 @@ Can process multiple files with CoNLL-format coreference information in last col
 
   Wasp:
     https://github.com/alviano/wasp
+
+# Citation
+
+Peter Schüller.
+Adjudication of Coreference Annotations via Answer Set Optimization.
+In: Logic Programming and Nonmonotonic Reasoning (LPNMR), pages 343-357, 2017.
 
 # License
 
