@@ -10,7 +10,6 @@ group: edge
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install libboost-all-dev
-  - pip install pexpect
   - sudo apt-get install python-pexpect
 
 install:
