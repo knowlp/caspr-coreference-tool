@@ -303,7 +303,7 @@ def findCommonDocuments(annotationdata):
   # get original order but only those present in all files
   orderedDocs = filter(lambda x: x in commonDocs, orderedDocs)
   return orderedDocs
-    
+
 #def keepOnlyCommonDocuments(annotationdata, commonDocs):
 #  def keepCommon(annotation):
 #    filename, docsdict = annotation
@@ -375,7 +375,7 @@ def createInputFacts(annotations, forcedannotation=None):
       if fileconst not in anonymousfileconst:
         anonymousfileconst[fileconst] = str(len(anonymousfileconst))
       fileconst = anonymousfileconst[fileconst]
-      
+
     mfacts += mentionFacts(fileconst, annodict['mentions'])
     cfacts += chainFacts(fileconst, annodict['chains'])
     summention += len(annodict['mentions'])
@@ -648,7 +648,7 @@ encoding_mm = '''
 
   % Guess which links to use.
   { uselink(File,M1,M2) } :- link(File,M1,M2).
-   
+
   % Represent canonical mentions and links between them.
   %clink(MID1,MID2) :- uselink(File,M1,M2),
   %  mention(File,M1,From1,To1), mention(File,M2,From2,To2),
@@ -660,12 +660,12 @@ encoding_mm = '''
     cfmention(File,M1,MID1), cfmention(File,M2,MID2), MID1 < MID2.
   clink(MID1,MID2) :- uselink(File,M2,M1),
     cfmention(File,M1,MID1), cfmention(File,M2,MID2), MID1 < MID2.
-   
+
   % Reflexive symmetric transitive closure of clink/2.
   cc(X,Y) :- clink(X,Y).
   cc(X,Y) :- cc(Y,X).
   cc(X,Z) :- cc(X,Y), cc(Y,Z).
-   
+
   % Smallest mention in one SCC of cc/2 becomes representative of the chain.
   notrepresentative(Y) :- cc(X,Y), X < Y.
   resultcm(X,Y) :- cc(X,Y), not notrepresentative(X).
@@ -1146,14 +1146,30 @@ def writeResultIncludingForced(results, forcedannotation, inout):
   writeResult(results, inout)
 
 def detectClingo():
+  global CLINGO
   try:
     p = subprocess.Popen(CLINGO, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     out, err = p.communicate('')
     #warn('OUT\n'+out+'ERR\n'+err)
     if p.returncode != 30:
-      raise Exception('returncode {}'.format(p.returncode))
+      p = subprocess.Popen('~/.local/bin/clingo', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+      out, err = p.communicate('')
+      if p.returncode != 30:
+        raise Exception('returncode {} no clingo is found'.format(p.returncode))
+      CLINGO = os.environ['HOME'] + '/.local/bin/clingo'
   except Exception as e:
-    raise Exception("could not detect '{}' in your path {}".format(CLINGO, e))
+    print('downloading clingo\'s binaries')
+    p = subprocess.Popen('wget -P /tmp https://github.com/potassco/clingo/releases/download/v5.2.0/clingo-5.2.0-linux-x86_64.tar.gz', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    out, err = p.communicate('')
+    if p.returncode != 0:
+      raise Exception('Could not download clingo returncode {}'.format(p.returncode))
+
+    print('instaling clingo\'s binaries')
+    p = subprocess.Popen('tar xvzf /tmp/clingo-5.2.0-linux-x86_64.tar.gz --strip-components=1 -C ~/.local/bin clingo-5.2.0-linux-x86_64/gringo clingo-5.2.0-linux-x86_64/clingo clingo-5.2.0-linux-x86_64/clasp clingo-5.2.0-linux-x86_64/lpconvert clingo-5.2.0-linux-x86_64/reify', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    out, err = p.communicate('')
+    if p.returncode != 0:
+     raise Exception('Could not install clingo returncode {}'.format(p.returncode))
+    CLINGO = os.environ['HOME'] + '/.local/bin/clingo'
 
 def main():
   annotations, inout, mode, obj, config = interpretArguments(sys.argv[1:])
@@ -1217,4 +1233,3 @@ class Table:
 
 if __name__ == "__main__":
   main()
-
