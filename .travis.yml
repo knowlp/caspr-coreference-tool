@@ -9,27 +9,10 @@ group: edge
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install libboost-all-dev
   - sudo apt-get install python-pexpect
 
 install:
-  - temp1=$PWD
-  - cd /tmp
-  - wget https://github.com/potassco/clingo/releases/download/v5.2.0/clingo-5.2.0-linux-x86_64.tar.gz
-  - tar xvzf clingo-5.2.0-linux-x86_64.tar.gz
-  - cd clingo-5.2.0-linux-x86_64/
-  - mkdir ~/.local/bin/
-  - mv clingo gringo lpconvert reify clasp ~/.local/bin/
-  - export PATH=$PATH:~/.local/bin
-
-  - cd /tmp
-  - wget -P /tmp https://github.com/alviano/wasp/archive/master.zip
-  - unzip master.zip
-  - cd wasp-master/
-  - make
-  - mv build/release/ ~/wasp-master
-  - export PATH=$PATH:~/wasp-master
-  - cd $temp1
+  - true
 
 script:
   - cd examples
