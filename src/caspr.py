@@ -1167,8 +1167,6 @@ def detectClingo():
     print('instaling clingo\'s binaries')
     p = subprocess.Popen('tar xvzf /tmp/clingo-5.2.0-linux-x86_64.tar.gz --strip-components=1 -C ~/.local/bin clingo-5.2.0-linux-x86_64/gringo clingo-5.2.0-linux-x86_64/clingo clingo-5.2.0-linux-x86_64/clasp clingo-5.2.0-linux-x86_64/lpconvert clingo-5.2.0-linux-x86_64/reify', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     out, err = p.communicate('')
-    print(out)
-    print(err)
     if p.returncode != 0:
      raise Exception('Could not install clingo returncode {}'.format(p.returncode))
     CLINGO = os.environ['HOME'] + '/.local/bin/clingo'

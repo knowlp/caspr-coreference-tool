@@ -12,7 +12,7 @@ before_install:
   - sudo apt-get install python-pexpect
 
 install:
-  - true
+  - mkdir ~/.local/bin
 
 script:
   - cd examples
