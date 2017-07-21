@@ -1,4 +1,5 @@
 [![codebeat badge](https://codebeat.co/badges/b5b5c4d3-9d53-48bd-ab7d-4ccd4b9c7dbe)](https://codebeat.co/projects/github-com-knowlp-caspr-coreference-tool-master)
+[![Build Status](https://travis-ci.org/knowlp/caspr-coreference-tool.svg?branch=master)](https://travis-ci.org/knowlp/caspr-coreference-tool)
 
 # Contents
 
