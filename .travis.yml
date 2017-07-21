@@ -1,0 +1,19 @@
+language: python
+
+python:
+  - "2.7"
+
+sudo: required
+dist: trusty
+group: edge
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install python-pexpect
+
+install:
+  - mkdir ~/.local/bin
+
+script:
+  - cd examples
+  - ./runall.sh
