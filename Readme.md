@@ -19,9 +19,16 @@ Can process multiple files with CoNLL-format coreference information in last col
 
 # Citation
 
-Peter Schüller.
-Adjudication of Coreference Annotations via Answer Set Optimization.
-In: Logic Programming and Nonmonotonic Reasoning (LPNMR), pages 343-357, 2017.
+* Peter Schüller.
+  Adjudication of Coreference Annotations via Answer Set Optimization.
+  Journal of Experimental & Theoretical Artificial Intelligence, 2018.
+  In press, [arXiv:1802.00033](http://arxiv.org/abs/1802.00033).
+
+# Other References
+
+* Peter Schüller.
+  Adjudication of Coreference Annotations via Answer Set Optimization.
+  In: Logic Programming and Nonmonotonic Reasoning (LPNMR), pages 343-357, 2017.
 
 # License
 
