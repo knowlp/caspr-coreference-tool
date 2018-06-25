@@ -517,6 +517,9 @@ def runASPClasp(code, config):
     # for default solver use these settings, for other solvers do not use specific settings (get them in 'tool' variable)
     args.append('--opt-strategy=usc,9') # unsatisfiable core optimization mode (speedup)
     args.append('--stats=2')
+    # setting seed is not sufficient it seems to make order of answer sets deterministic (maybe because of USC?)
+    #if config['canonicalize']:
+    #  args.append('--seed=1')
     if config['all'] == True:
       args.append('--opt-mode=optN')
       args.append('0')
@@ -563,6 +566,9 @@ def runASPClasp(code, config):
   if len(answersets) == 0:
     raise Exception('clingo found no answer set')
   warn('found {} answer sets with cost {} optimal={}'.format(len(answersets), repr(cost), str(optimal)))
+  if config['canonicalize']:
+    # sort answer sets
+    answersets = sorted(answersets)
   if config['debug']:
     for answerset in answersets:
       warn('Answer Set: '+repr(answerset))
