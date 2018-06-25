@@ -15,7 +15,7 @@ for obj in v va u ua; do
   echo "TEST RUN $AT: AUTO objective $obj --all"
   ((AT++))
   # run
-  ../caspr --obj=$obj --all --out=$WORKDIR/out.$obj.conll \
+  ../caspr --canonicalize --obj=$obj --all --out=$WORKDIR/out.$obj.conll \
     --ann=$AUTOIN/in1.conll --ann=$AUTOIN/in2.conll --ann=$AUTOIN/in3.conll --ann=$AUTOIN/in4.conll
   # compare
   if diff $WORKDIR/out.$obj.conll $AUTOOUT/out.$obj.conll; then
@@ -35,12 +35,12 @@ for f in redo1 redo2; do
   ((AT++))
   cp $SEMIAUTOIN/$f.in.conll $WORKDIR/$f.inout.$obj.conll
   # run
-  ../caspr --obj=$obj --all --redo=$WORKDIR/$f.inout.$obj.conll \
+  ../caspr --canonicalize --obj=$obj --all --redo=$WORKDIR/$f.inout.$obj.conll \
     --ann=$AUTOIN/in1.conll --ann=$AUTOIN/in2.conll --ann=$AUTOIN/in3.conll --ann=$AUTOIN/in4.conll 
   # compare
-  diff $WORKDIR/$f.inout.$obj.conll $SEMIAUTOOUT/$f.inout.$obj.conll
+  diff $WORKDIR/$f.inout.$obj.conll $SEMIAUTOOUT/$f.inout.$obj.canonical.conll
   OUTOK=$?
-  diff $WORKDIR/$f.inout.$obj.conll.clean $SEMIAUTOOUT/$f.inout.$obj.conll.clean
+  diff $WORKDIR/$f.inout.$obj.conll.clean $SEMIAUTOOUT/$f.inout.$obj.canonical.conll.clean
   CLEANOK=$?
   if test "$OUTOK$CLEANOK" = "00"; then
     echo "TEST OK"

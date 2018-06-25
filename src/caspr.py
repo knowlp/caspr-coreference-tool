@@ -69,6 +69,7 @@ def interpretArguments(argv):
     help='Store ASP program to ASPOUT file.')
   parser.add_argument('--nocomp', action='store_true', default=False, help='Do not call solver')
   parser.add_argument('--anonymize', action='store_true', default=False, help='Remove comments and filenames')
+  parser.add_argument('--canonicalize', action='store_true', default=False, help='Canonicalize Chain IDs (for test scripts)')
   parser.add_argument('--all', action='store_true', default=False, help='Output all solutions with number postfixes.')
   parser.add_argument('--tabformat', action='store_true', default=False, help='Output in tabbed format (default = space)')
   parser.add_argument('--debug', action='store_true', default=False,
@@ -111,6 +112,7 @@ def interpretArguments(argv):
   config['nocomp'] = args.nocomp
   config['anonymize'] = args.anonymize
   config['debug'] = args.debug
+  config['canonicalize'] = args.canonicalize
   config['all'] = args.all
   config['timelimit'] = TIMELIMIT
 
@@ -821,7 +823,7 @@ encodings_obj = {
 
 rMId = re.compile(r'mid\(([0-9]+),([0-9]+)\)')
 def extractMentionsChains(answerset):
-  # key = chain id (from ASP, this is a compount term!)
+  # key = chain id (from ASP, this is a compound term!)
   # value = set of mention id's
   chains = collections.defaultdict(set)
   mentions = {} # key = mention id, value = (fromline,toline)
@@ -838,7 +840,7 @@ def extractMentionsChains(answerset):
       mid += 1
   return mentions, chains
 
-def createResultLines(annotations, mentions, chains):
+def createResultLines(annotations, mentions, chains, config):
   '''
     result looks like this:
     {
@@ -858,7 +860,7 @@ def createResultLines(annotations, mentions, chains):
     #warn('thisline '+repr(thisline))
     out['lines'].append(thisline)
   eraseIgnoredMentions(out['lines'], annotations)
-  createCoreferences(out['lines'], chains, mentions)
+  createCoreferences(out['lines'], chains, mentions, config)
   return out
 
 def eraseIgnoredMentions(lines, annotations):
@@ -888,7 +890,7 @@ def eraseIgnoredMentions(lines, annotations):
           warn('orig {} = new {} for deleting {} which should not happen'.format(orig, new, d))
         #warn('orig {} / new {} for deleting {}'.format(orig, new, d))
 
-def createCoreferences(lines, chains, mentions):
+def createCoreferences(lines, chains, mentions, config):
   '''
   writes coreference into last column of lines
   '''
@@ -900,7 +902,14 @@ def createCoreferences(lines, chains, mentions):
   # 1)
   # hence for ech record in out we first find all mentions beginning/ending here
   aux = [ {'starting':[], 'ending':[], 'unit':[]} for x in range(0,len(lines)) ]
-  for cidx, chain in chains.items():
+  id_chain_list = chains.items()
+  if config['canonicalize']:
+    # canonicalize chains by their content
+    chainvalues = [ frozenset(x) for x in chains.values() ]
+    # sort by hash values of the content frozensets (just to get some canonical order)
+    sortedchains = sorted(chainvalues, key=lambda x: hash(x))
+    id_chain_list = [ (pair[0]+1, pair[1]) for pair in enumerate(sortedchains) ]
+  for cidx, chain in id_chain_list:
     #warn('cidx {} chain {}'.format(repr(cidx), repr(chain)))
     for mid in chain:
       mention = mentions[mid]
@@ -1052,14 +1061,21 @@ def consolidate(objective, doc, annotations, forcedannotation=None, config={}):
     #warn('got mentions '+repr(mentions))
     #warn('got chains '+repr(chains))
     ichains = createIntegerChainIds(chains, mentions, forcedannotation)
-    lines = createResultLines(annotations, mentions, ichains)
+    lines = createResultLines(annotations, mentions, ichains, config)
     out[docformat.format(doc=doc, idx=idx)] = lines
   return out
 
-def writeOutputTabs(f, results):
+def sortedDocsNameDict(results, config):
+  docs_name_dict = results.items()
+  if config['canonicalize']:
+    docs_name_dict = sorted(results.items())
+    #print("SORTED"+repr(docs_name_dict))
+  return docs_name_dict
+
+def writeOutputTabs(f, results, config):
   #warn('writeOutput '+repr(results))
   colwidth = collections.defaultdict(int)
-  for docname, docdict in results.items():
+  for docname, docdict in sortedDocsNameDict(results, config):
     #warn('docname {} docdict {}'.format(docname, repr(docdict)))
     f.write('#begin document ({});\n'.format(docname))
     for l in docdict['lines']:
@@ -1078,9 +1094,9 @@ def writeOutputTabs(f, results):
   #warn(lessstr)
   return lessstr
 
-def writeOutputTable(f, results):
+def writeOutputTable(f, results, config):
   #warn('writeOutput '+repr(results))
-  for docname, docdict in results.items():
+  for docname, docdict in sortedDocsNameDict(results, config):
     #warn('docname {} docdict {}'.format(docname, repr(docdict)))
     f.write('#begin document ({});\n'.format(docname))
     t = Table()
@@ -1109,10 +1125,10 @@ def createBackup(filename):
       shutil.copyfile(filename, backupname)
       return
 
-def writeResult(results, inout):
+def writeResult(results, inout, config):
   warn("writing to file '{}'".format(inout))
   with open(inout, 'w+') as f:
-    lessstr = writeOutput(f, results)
+    lessstr = writeOutput(f, results, config)
 
   if lessstr is not None:
     lesscmd = lessstr + ' ' + inout
@@ -1123,7 +1139,7 @@ def writeResult(results, inout):
       print('To view the result in Linux, you can use the following command:')
       print(lesscmd)
 
-def writeResultIncludingForced(results, forcedannotation, inout):
+def writeResultIncludingForced(results, forcedannotation, inout, config):
   #warn('results '+repr(results))
   #warn('forcedannotation '+repr(forcedannotation))
   # results and forced annotations are parallel
@@ -1139,11 +1155,11 @@ def writeResultIncludingForced(results, forcedannotation, inout):
       if fcoref[0].startswith('='):
         rcoref = rline[-1]
         if fcoref[1:] != rcoref:
-          warn("forced annotation '{}' in line {} does not correspond to obtained '{}'".format(fcoref, atline, rcoref))
-        rline[-1] = fcoref
+          warn("forced annotation '{}' in line {} does not correspond to obtained '{}' [this is intended and normal if you use --canonicalize]".format(fcoref, atline, rcoref))
+        rline[-1] = '='+rline[-1]
       atline += 1
   # write out again
-  writeResult(results, inout)
+  writeResult(results, inout, config)
 
 def detectClingo():
   global CLINGO
@@ -1180,11 +1196,11 @@ def main():
     createBackup(inout)
     forcedannotation = readInput({'path':inout, 'columns':'last', 'corefcolumn':'last'}, onlyUser=True)
     results = consolidateAll(obj, annotationdata, forcedannotation, config)
-    writeResult(results, inout+'.clean')
-    writeResultIncludingForced(results, forcedannotation, inout)
+    writeResult(results, inout+'.clean', config)
+    writeResultIncludingForced(results, forcedannotation, inout, config)
   if mode == 'auto':
     results = consolidateAll(obj, annotationdata, [], config)
-    writeResult(results, inout)
+    writeResult(results, inout, config)
 
 # should be in library, but easier to ship if in same file
 class Table:
