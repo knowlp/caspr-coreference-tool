@@ -1,7 +1,7 @@
 language: python
 
 python:
-  - "2.7"
+  - "3"
 
 sudo: required
 dist: trusty
@@ -9,7 +9,7 @@ group: edge
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install python-pexpect
+  - sudo apt-get install python3-pexpect
 
 install:
   - mkdir ~/.local/bin
