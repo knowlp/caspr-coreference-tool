@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 # encoding: utf8
 
 # CaspR - Semi-Automatic Coreference Resolution Adjudication Tool based on Answer Set Programming
@@ -1120,8 +1120,8 @@ def writeResult(results, inout):
     if runLess:
       subprocess.call(lesscmd, shell=True)
     else:
-      print 'To view the result in Linux, you can use the following command:'
-      print lesscmd
+      print('To view the result in Linux, you can use the following command:')
+      print(lesscmd)
 
 def writeResultIncludingForced(results, forcedannotation, inout):
   #warn('results '+repr(results))
