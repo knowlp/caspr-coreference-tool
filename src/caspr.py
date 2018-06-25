@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # encoding: utf8
 
 # CaspR - Semi-Automatic Coreference Resolution Adjudication Tool based on Answer Set Programming
@@ -161,7 +161,7 @@ def interpretCoNLLRaw(filename, lines, usecolumns, corefcolumn, onlyUser=False):
   for lineidx, line in enumerate(lines):
     if len(line) <= maxidx:
       raise Exception("short line: want to use field {} but found only {} fields in '{}'".format(maxidx+1, len(line), repr(line)))
-    thisline = map(lambda idx: line[idx], usecolumns)
+    thisline = [ line[idx] for idx in usecolumns ]
     out['lines'].append(thisline)
     coref = line[corefcolumn]
     if onlyUser:
@@ -216,7 +216,7 @@ def interpretCoNLLRaw(filename, lines, usecolumns, corefcolumn, onlyUser=False):
   rmchains = []
   rmmentions = []
   singlementionchains = 0
-  for cid, c in out['chains'].iteritems():
+  for cid, c in out['chains'].items():
     if len(c) == 1:
       mid = list(c)[0]
       singlementionchains += 1
@@ -270,7 +270,7 @@ def readInput(filespec, onlyUser=False):
   with open(filename, 'r') as f:
     rawdocs = readCONLLRaw(f.read())
     out = collections.OrderedDict()
-    for docname, docdata in rawdocs.iteritems():
+    for docname, docdata in rawdocs.items():
       if len(docdata) == 0:
         out[docname] = {}
         continue
@@ -281,7 +281,7 @@ def readInput(filespec, onlyUser=False):
       elif filespec['columns'] == 'all':
         usecolumns = [ x for x in range(0,ncolumns) ]
       else:
-        usecolumns = map(int, filespec['columns'].split(','))
+        usecolumns = [ int(x) for x in filespec['columns'].split(',') ]
       if filespec['corefcolumn'] != 'last':
         corefcolumn = int(filespec['corefcolumn'])
         if corefcolumn not in usecolumns:
@@ -291,17 +291,17 @@ def readInput(filespec, onlyUser=False):
 
 def findCommonDocuments(annotationdata):
   # extract only doc names in original order
-  docnames = map(lambda adic: adic[1].keys(), annotationdata)
+  docnames = [ adic[1].keys() for adic in annotationdata ]
   # save original order
   orderedDocs = docnames[0]
   # map to sets
-  docnames = map(set, docnames)
+  docnames = [ set(x) for x in docnames ]
   # build intersection of all sets
   commonDocs = docnames[0]
   for dn in docnames[1:]:
     commonDocs = commonDocs & dn
   # get original order but only those present in all files
-  orderedDocs = filter(lambda x: x in commonDocs, orderedDocs)
+  orderedDocs = [x for x in orderedDocs if x in commonDocs ]
   return orderedDocs
 
 #def keepOnlyCommonDocuments(annotationdata, commonDocs):
@@ -328,7 +328,7 @@ def consolidateAll(objective, annotations, forcedannotation, config):
       return (filename, documents[docname])
     #warn("anno "+repr(annotations))
     #warn("forcedanno "+repr(forcedannotations))
-    selected_annotations = map(lambda anno: selectDocument(anno, doc), annotations)
+    selected_annotations = [ selectDocument(anno, doc) for anno in annotations ]
     selected_forcedannotation = None
     if forcedannotation:
       selected_forcedannotation = selectDocument(forcedannotation, doc)
@@ -343,7 +343,7 @@ def createInputFacts(annotations, forcedannotation=None):
     global config
     out = []
     #warn('mentions '+repr(mentions))
-    for mid, mdata in mentions.iteritems():
+    for mid, mdata in mentions.items():
       mfrom, mto = mdata
       comment = ''
       if not ('anonymize' in config and config['anonymize']):
@@ -354,7 +354,7 @@ def createInputFacts(annotations, forcedannotation=None):
   def chainFacts(fileconst, chains):
     out = []
     #warn('chains '+repr(chains))
-    for cidx, chain in chains.iteritems():
+    for cidx, chain in chains.items():
       #warn('chain {}: {}'.format(cidx, chain))
       for midx in chain:
         #warn('  midx {}'.format(midx))
@@ -382,13 +382,13 @@ def createInputFacts(annotations, forcedannotation=None):
     sumchain += len(annodict['chains'])
     maxtoken = max(maxtoken, len(annodict['lines']))
     # max number of mentions in chain
-    maxminchain = max(maxminchain, max(map(lambda x: len(x), annodict['chains'].itervalues())))
+    maxminchain = max(maxminchain, max([ len(x) for x in annodict['chains'].values()]))
   for ann in [forcedannotation for x in [1] if forcedannotation]:
     #warn('forced annotation: '+repr(ann))
     unused_filename, annodict = ann
     mfacts += mentionFacts('forced', annodict['mentions'])
     cfacts += chainFacts('forced', annodict['chains'])
-    lfacts += map(lambda lineno: 'emptyline({}).'.format(lineno), annodict['none'])
+    lfacts += [ 'emptyline({}).'.format(lineno) for lineno in annodict['none'] ]
   # number of tokens in doc = same in all docs, just take max
   warn('creating facts: {} tokens, {} annotations, {} mentions, {} chains (longest {} mentions), {} empty lines'.format(
     maxtoken, len(sannotations), summention, sumchain, maxminchain, len(lfacts)))
@@ -480,7 +480,7 @@ def runInPExpect(args, code, timelimit, logprefix=None):
   # because of using pexpect we cannot distinguish stdout and stderr!
   # (we can use pexpect on a Popen file descriptor but then clasp will buffer again and we are not able to log the output live!)
   out = []
-  line = pexp.readline()
+  line = pexp.readline().decode("utf-8")
   nextout = time.time()
   lastprogression = None
   try:
@@ -498,7 +498,7 @@ def runInPExpect(args, code, timelimit, logprefix=None):
           nextout = time.time() + 10.0 # output progression only all 10 seconds
           sys.stderr.write(line)
           sys.stderr.flush()
-      line = pexp.readline()
+      line = pexp.readline().decode("utf-8") 
   except:
     pexp.kill(15)
     raise
@@ -545,10 +545,10 @@ def runASPClasp(code, config):
   lineiter = iter(out)
   try:
     while True:
-      line = lineiter.next()
+      line = next(lineiter)
       if line.startswith('Answer: '):
-        answerset = lineiter.next().strip()
-        cost = lineiter.next().split(' ',1)[1].strip()
+        answerset = next(lineiter).strip()
+        cost = next(lineiter).split(' ',1)[1].strip()
         #warn("got cost "+repr(cost)+" at bestcost "+repr(bestcost)+"with {} answersets".format(len(answersets)))
         if bestcost is None or cost != bestcost:
           bestcost = cost
@@ -849,7 +849,7 @@ def createResultLines(annotations, mentions, chains):
   '''
   out = { 'lines': [], 'mentions': mentions, 'chains': chains }
   #warn('annotations '+repr(annotations))
-  for lineproduct in zip(*map(lambda ann: ann[1]['lines'], annotations)):
+  for lineproduct in zip(*[ ann[1]['lines'] for ann in annotations ]):
     #warn('lineproduct '+repr(lineproduct))
     # flatten
     thisline = [ x for y in lineproduct for x in y ]
@@ -900,7 +900,7 @@ def createCoreferences(lines, chains, mentions):
   # 1)
   # hence for ech record in out we first find all mentions beginning/ending here
   aux = [ {'starting':[], 'ending':[], 'unit':[]} for x in range(0,len(lines)) ]
-  for cidx, chain in chains.iteritems():
+  for cidx, chain in chains.items():
     #warn('cidx {} chain {}'.format(repr(cidx), repr(chain)))
     for mid in chain:
       mention = mentions[mid]
@@ -923,19 +923,19 @@ def createCoreferences(lines, chains, mentions):
     if len(ends) > 0 and len(starts) > 0:
       # we have ending and starting: first put ending, then unit, then starting
       corefstr = ''.join(
-        map(lambda x: '{})'.format(x['chain']), ends) +
-        map(lambda x: '({})'.format(x['chain']), o['unit']) +
-        map(lambda x: '({}'.format(x['chain']), starts))
+        [ '{})'.format(x['chain']) for x in ends ] +
+        [ '({})'.format(x['chain']) for x in o['unit'] ] +
+        [ '({}'.format(x['chain']) for x in starts])
     elif len(ends) == 0:
       # we have no ending: first put starting and then unit
       corefstr = ''.join(
-        map(lambda x: '({}'.format(x['chain']), starts) +
-        map(lambda x: '({})'.format(x['chain']), o['unit']))
+        [ '({}'.format(x['chain']) for x in starts ] +
+        [ '({})'.format(x['chain']) for x in o['unit'] ])
     elif len(starts) == 0:
       # we have no starts: first put unit then end
       corefstr = ''.join(
-        map(lambda x: '({})'.format(x['chain']), o['unit']) +
-        map(lambda x: '{})'.format(x['chain']), ends))
+        [ '({})'.format(x['chain']) for x in o['unit'] ] +
+        [ '{})'.format(x['chain']) for x in ends ])
     assert(l[-1] is None) # assume someone created empty places for the coref column
     if corefstr == '':
       l[-1] = '-'
@@ -960,7 +960,7 @@ def createIntegerChainIds(chains, mentions, forcedannotation=None):
   if forcedannotation:
     unused, fann = forcedannotation
     #warn('createIntegerChainIds fann '+repr(fann))
-    for chid, chset in fann['chains'].iteritems():
+    for chid, chset in fann['chains'].items():
       for mid in chset:
         mfrom, mto = fann['mentions'][mid]
         key = (mfrom,mto)
@@ -972,7 +972,7 @@ def createIntegerChainIds(chains, mentions, forcedannotation=None):
   chid2idx = {}
   ichains = {}
   # go through chains and look if chain has known (=forced) chain id, if yes register it
-  for chainid, chainset in chains.iteritems():
+  for chainid, chainset in chains.items():
     forced_chain_id = None
     firstmention = (None, None, None)
     for mid in chainset:
@@ -1001,7 +1001,7 @@ def createIntegerChainIds(chains, mentions, forcedannotation=None):
     while nextchainidx in ichains:
       nextchainidx += 1
     return nextchainidx
-  for chainid, chainset in chains.iteritems():
+  for chainid, chainset in chains.items():
     if chainid not in chid2idx:
       new_chain_id = nextChainId(ichains)
       chid2idx[chainid] = new_chain_id
@@ -1059,7 +1059,7 @@ def consolidate(objective, doc, annotations, forcedannotation=None, config={}):
 def writeOutputTabs(f, results):
   #warn('writeOutput '+repr(results))
   colwidth = collections.defaultdict(int)
-  for docname, docdict in results.iteritems():
+  for docname, docdict in results.items():
     #warn('docname {} docdict {}'.format(docname, repr(docdict)))
     f.write('#begin document ({});\n'.format(docname))
     for l in docdict['lines']:
@@ -1080,13 +1080,13 @@ def writeOutputTabs(f, results):
 
 def writeOutputTable(f, results):
   #warn('writeOutput '+repr(results))
-  for docname, docdict in results.iteritems():
+  for docname, docdict in results.items():
     #warn('docname {} docdict {}'.format(docname, repr(docdict)))
     f.write('#begin document ({});\n'.format(docname))
     t = Table()
     for lidx, l in enumerate(docdict['lines']):
       for fidx, field in enumerate(l):
-        t.cell(lidx, fidx, unicode(field, 'utf8'))
+        t.cell(lidx, fidx, field)
     f.write(str(t)+'\n')
     f.write('#end document\n')
   return None
@@ -1128,7 +1128,7 @@ def writeResultIncludingForced(results, forcedannotation, inout):
   #warn('forcedannotation '+repr(forcedannotation))
   # results and forced annotations are parallel
   # modify results in place
-  for res, forc in zip(results.iteritems(), forcedannotation[1].iteritems()):
+  for res, forc in zip(results.items(), forcedannotation[1].items()):
     resname, resdict = res
     forcname, forcdict = forc
     atline = 1
@@ -1174,7 +1174,7 @@ def detectClingo():
 def main():
   annotations, inout, mode, obj, config = interpretArguments(sys.argv[1:])
 
-  annotationdata = map(readInput, annotations)
+  annotationdata = [ readInput(x) for x in annotations ]
   #warn('annotationdata='+repr(annotationdata))
   if mode == 'redo':
     createBackup(inout)
@@ -1198,11 +1198,10 @@ class Table:
   def cell(self, row, col, content, align='right'):
     assert(isinstance(row,int))
     assert(isinstance(col,int))
-    assert(isinstance(content,str) or isinstance(content,unicode))
+    assert(isinstance(content,str))
     key = (row,col)
     self.cols.add(col)
     self.rows.add(row)
-    content = unicode(content)
     self.data[key] = (content, align)
     self.colwidths[col] = max(self.colwidths[col], len(content))
     #warn('cell {} {} set to {} {}'.format(row, col, content, align))
@@ -1225,9 +1224,9 @@ class Table:
         else:
           data, align = '', 'left'
         if align == 'left':
-          out += data.ljust(self.colwidths[c]).encode('utf-8')
+          out += data.ljust(self.colwidths[c])
         if align == 'right':
-          out += data.rjust(self.colwidths[c]).encode('utf-8')
+          out += data.rjust(self.colwidths[c])
     #warn('output of length {}'.format(len(out)))
     return out
 
